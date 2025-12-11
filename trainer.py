@@ -153,7 +153,7 @@ class NodeClassificationTrainer:
         )
         self.criterion = nn.CrossEntropyLoss()
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer, mode="min", factor=0.5, patience=100, verbose=False
+            self.optimizer, mode="min", factor=0.5, patience=100
         )
 
         # training settings

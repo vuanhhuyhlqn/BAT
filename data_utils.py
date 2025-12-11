@@ -358,7 +358,7 @@ def get_train_class_indices(y, n_class, train_mask):
     - train_class_indices: list
         List of lists containing indices of training nodes for each class.
     """
-    indices = torch.arange(len(y))
+    indices = torch.arange(len(y), device=y.device)
     train_class_indices = []
     for i in range(n_class):
         cls_indices = indices[((y == i) & train_mask)]

@@ -443,7 +443,7 @@ class NodeClassificationTrainer:
         results: dict,
         epoch: int,
         verbose_config: dict,
-        runtime: bool or str = None,
+        runtime: str = None,
     ):
         """
         Prints verbose training progress information.

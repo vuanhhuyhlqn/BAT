@@ -213,7 +213,7 @@ class NodeClassificationTrainer:
         neighbor_loader = NeighborLoader(
             data=augmented_data,
             num_neighbors=[30, 10, 10],
-            batch_size=16,
+            batch_size=32,
             input_nodes=augmented_data.train_mask,
             shuffle=True
         )

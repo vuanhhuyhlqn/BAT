@@ -10,7 +10,7 @@ dataset:
   imb_ratio: 10
 
 architecture:
-  gnn_arch: GCN
+  gnn_arch: SAGE
   n_layer: 3
   hid_dim: 256
 

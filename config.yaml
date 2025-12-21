@@ -2,7 +2,7 @@ general:
   gpu_id: 0
   seed: 42
   n_runs: 5
-  debug: false
+  debug: true
 
 dataset:
   dataset: cora

@@ -1,8 +1,8 @@
 general:
   gpu_id: 0
   seed: 42
-  n_runs: 5
-  debug: true
+  n_runs: 3
+  debug: false
 
 dataset:
   dataset: cora
@@ -17,8 +17,8 @@ architecture:
 training:
   lr: 0.01
   weight_decay: 5e-4
-  epochs: 2000
-  early_stop: 200
+  epochs: 500
+  early_stop: 50
   tqdm: false
 
 bat_parameters:

@@ -6,6 +6,8 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch_geometric as pyg
+from torch_geometric.loader import NeighborLoader
+from torch_geometric.data import Data
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, f1_score
 from bat import BaseGraphAugmenter, DummyAugmenter
 from tqdm import trange
@@ -176,7 +178,7 @@ class NodeClassificationTrainer:
         )
         self.save_model_dir = save_model_dir
         self.save_model_name = save_model_name
-        self.save_model_path = f"{save_model_dir}/{save_model_name}"
+        self.save_model_path = os.path.join(save_model_dir, save_model_name)
 
         # evaluation settings
         self.data_masks = {
@@ -192,6 +194,7 @@ class NodeClassificationTrainer:
         # extract necessary variables
         data = self.data
         model = self.model
+        device = self.device
         optimizer = self.optimizer
         scheduler = self.scheduler
         criterion = self.criterion
@@ -204,22 +207,36 @@ class NodeClassificationTrainer:
             x, edge_index, aug_runtime_info = augmenter.augment(model, x, edge_index)
             y, train_mask = augmenter.adapt_labels_and_train_mask(y, train_mask)
 
+        augmented_data = Data(x=x, edge_index=edge_index, y=y)
+        augmented_data.train_mask = train_mask
+        
+        neighbor_loader = NeighborLoader(
+            data=augmented_data,
+            num_neighbors=[30, 10, 10],
+            batch_size=16,
+            input_nodes=augmented_data.train_mask,
+            shuffle=True
+        )
+
         # record runtime
         start_time = time.time()
 
         # set model in training mode and zero out gradients
         model.train()
-        optimizer.zero_grad()
+        for batch in neighbor_loader:
+            batch = batch.to(device)
 
-        # compute model output for input and edge indices
-        output = model(x, edge_index)
+            optimizer.zero_grad()
 
-        # compute loss on training nodes
-        loss = criterion(output[train_mask], y[train_mask])
+            # compute model output for input and edge indices
+            output = model(batch.x, batch.edge_index)
 
-        # backpropagate the loss and update the model parameters
-        loss.backward()
-        optimizer.step()
+            # compute loss on training nodes
+            loss = criterion(output, batch.y)
+
+            # backpropagate the loss and update the model parameters
+            loss.backward()
+            optimizer.step()
 
         # record runtime
         used_time = time.time() - start_time
@@ -390,7 +407,18 @@ class NodeClassificationTrainer:
 
         # load the best model parameters and save best results
         if return_best_model:
-            model.load_state_dict(torch.load(save_model_path))
+            if not os.path.exists(save_model_path):
+                raise FileNotFoundError(
+                    f"Saved model '{self.save_model_path}' not found. "
+                    "The training run may not have produced a checkpoint."
+                )
+            try:
+                state = torch.load(self.save_model_path, map_location='cpu')
+            except Exception as e:
+                raise RuntimeError(
+                    f"Error loading saved model '{self.save_model_path}': {e}"
+                )
+            model.load_state_dict(state)
         self.best_eval_results = self.model_eval()
 
         if verbose_flag:

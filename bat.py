@@ -575,6 +575,7 @@ class BatAugmenter(BaseGraphAugmenter):
         ).scatter_(
             1, y_pred[edge_index[1]].unsqueeze(1), 1
         )  # [n_edges, n_class]
+        
         neighbor_y_distr = (
             torch.zeros((n_node, n_class), dtype=torch.int, device=device)
             .scatter_add_(

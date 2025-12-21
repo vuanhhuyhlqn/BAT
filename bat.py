@@ -218,7 +218,7 @@ class BatAugmenter(BaseGraphAugmenter):
     - estimate_node_posterior_likelihood(self, y_pred_proba, y_neighbor_distr)
         Computes posterior likelihood for each node and class.
 
-    - get_virual_link_proba(self, node_posterior, y_pred)
+    - get_virtual_link_proba(self, node_posterior, y_pred)
         Computes virtual link probabilities based on node posterior likelihood.
     """
 
@@ -354,7 +354,7 @@ class BatAugmenter(BaseGraphAugmenter):
         node_posterior = self.estimate_node_posterior_likelihood(
             y_pred_proba, y_neighbor_distr
         )
-        virtual_link_proba = self.get_virual_link_proba(node_posterior, y_pred)
+        virtual_link_proba = self.get_virtual_link_proba(node_posterior, y_pred)
         time_cost_sim = time.time() - start_time_sim
 
         start_time_gen = time.time()
@@ -643,7 +643,7 @@ class BatAugmenter(BaseGraphAugmenter):
             raise NotImplementedError
         return node_posterior
 
-    def get_virual_link_proba(self, node_posterior: torch.Tensor, y_pred: torch.Tensor):
+    def get_virtual_link_proba(self, node_posterior: torch.Tensor, y_pred: torch.Tensor):
         """
         Computes virtual link probabilities based on node posterior likelihood.
 

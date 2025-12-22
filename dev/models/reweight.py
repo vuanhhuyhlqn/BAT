@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 def get_weight(is_reweight, class_num_list):
     if is_reweight:
         min_number = np.min(class_num_list)

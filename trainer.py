@@ -223,6 +223,8 @@ class NodeClassificationTrainer:
 
         # set model in training mode and zero out gradients
         model.train()
+
+        # training with mini-batch through neighbor_loader
         for batch in neighbor_loader:
             batch = batch.to(device)
 
@@ -267,7 +269,7 @@ class NodeClassificationTrainer:
         model = self.model
         metrics = self.eval_metrics
         criterion = self.criterion
-
+        print(f"Data is on {data.x.device}")
         # set model in evaluation mode and compute logits
         model.eval()
         with torch.no_grad():

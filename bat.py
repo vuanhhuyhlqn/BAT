@@ -302,6 +302,7 @@ class BatAugmenter(BaseGraphAugmenter):
 
         return self
 
+    #TODO: We cannot keep all the data on the GPU for augmenting
     def augment(
         self, model: torch.nn.Module, x: torch.Tensor, edge_index: torch.Tensor
     ):
@@ -438,6 +439,7 @@ class BatAugmenter(BaseGraphAugmenter):
             f")"
         )
 
+    #TODO: require sampling for big dataset
     @staticmethod
     def predict_proba(
         model: torch.nn.Module,

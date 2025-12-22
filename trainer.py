@@ -256,6 +256,7 @@ class NodeClassificationTrainer:
 
         return
 
+    #TODO: require sampling for big dataset
     def model_eval(self):
         """
         Evaluates the model on the validation and test sets.
@@ -269,7 +270,7 @@ class NodeClassificationTrainer:
         model = self.model
         metrics = self.eval_metrics
         criterion = self.criterion
-        print(f"Data is on {data.x.device}")
+        
         # set model in evaluation mode and compute logits
         model.eval()
         with torch.no_grad():

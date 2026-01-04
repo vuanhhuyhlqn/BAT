@@ -21,7 +21,6 @@ class StandGAT1(nn.Module):
 
         return x
 
-
 class StandGAT2(nn.Module):
     def __init__(self, nfeat, nhid, nclass, dropout, nlayer=2):
         super(StandGAT2, self).__init__()

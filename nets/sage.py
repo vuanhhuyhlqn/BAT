@@ -52,7 +52,6 @@ class GraphSAGE2(nn.Module):
 
         return x
 
-
 class GraphSAGEX(nn.Module):
     def __init__(self, nfeat, nhid, nclass, dropout, nlayer=3):
         super(GraphSAGEX, self).__init__()

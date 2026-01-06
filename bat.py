@@ -466,10 +466,16 @@ class BatAugmenter(BaseGraphAugmenter):
         """
         model.eval()
         with torch.no_grad():
+            device = next(model.parameters()).device # get the model device
+
+            x = x.to(device)
+            edge_index = edge_index.to(device)
+
             logits = model.forward(x, edge_index)
-        pred_proba = torch.softmax(logits, dim=1).detach()
+
+        pred_proba = torch.softmax(logits, dim=1).detach().cpu() # move pred_proba to cpu after caluclation
         if return_numpy:
-            pred_proba = pred_proba.cpu().numpy()
+            pred_proba = pred_proba.numpy()
         return pred_proba
 
     @staticmethod

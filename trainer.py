@@ -1,6 +1,7 @@
 import os
 import time
 
+from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import torch
@@ -146,6 +147,7 @@ class NodeClassificationTrainer:
         # initialize
         self.model = model
         self.data = data
+        self.data.to('cpu')
         self.device = device
         self.augmenter = augmenter.init_with_data(
             data
@@ -212,8 +214,8 @@ class NodeClassificationTrainer:
         
         train_neighbor_loader = NeighborLoader(
             data=augmented_data,
-            num_neighbors=[15, 10, 5],
-            batch_size=32,
+            num_neighbors=[30, 20, 10],
+            batch_size=1024,
             input_nodes=augmented_data.train_mask,
             shuffle=True
         )
@@ -259,15 +261,15 @@ class NodeClassificationTrainer:
             model.eval()
             val_neighbor_loader = NeighborLoader(
                 data=data,
-                num_neighbors=[10, 10, 10],
-                batch_size=32,
+                num_neighbors=[30, 20, 10],
+                batch_size=1024,
                 input_nodes=data.val_mask,
-                shuffle=True
+                shuffle=False
             )
 
             total_loss = 0
             for batch in val_neighbor_loader:
-                # batch = batch.to(self.device)
+                batch = batch.to(self.device)
                 output = model(batch.x, batch.edge_index)
                 loss = criterion(output[:batch.batch_size], batch.y[:batch.batch_size])
 
@@ -297,19 +299,34 @@ class NodeClassificationTrainer:
         criterion = self.criterion
         
         # set model in evaluation mode and compute logits
+        logits = []
         model.eval()
         with torch.no_grad():
-            logits = model(data.x, data.edge_index)
+            val_neighbor_loader = NeighborLoader(
+                data=data,
+                num_neighbors=[30, 20, 10],
+                batch_size=1024,
+                shuffle=False
+            )
+            
+            for batch in val_neighbor_loader:
+                batch = batch.to(self.device)
+                batch_logits = model(batch.x, batch.edge_index)   
+                batch_logits = batch_logits[:batch.batch_size] 
+                logits.append(batch_logits.cpu())
 
+        # logits = model(data.x, data.edge_index)
+        logits = torch.cat(logits, dim=0)
+        
         # obtain predicted labels and true labels as numpy arrays
         pred = logits.argmax(dim=1)
-        y_pred = pred.cpu().numpy()
+        y_pred = pred.numpy()
         y_true = data.y.cpu().numpy()
 
         # initialize a dictionary to store evaluation results
         results = {
             "loss": {
-                data_name: criterion(logits[data_mask], data.y[data_mask]).item()
+                data_name: criterion(logits[data_mask], data.y[data_mask].cpu()).item()
                 for data_name, data_mask in self.data_masks.items()
             }
         }
@@ -324,6 +341,7 @@ class NodeClassificationTrainer:
             }
 
         # return the evaluation results
+
         return results
 
     def train(
@@ -331,7 +349,7 @@ class NodeClassificationTrainer:
         train_epoch: int = None,
         eval_freq: int = None,
         verbose_freq: int = None,
-        return_best_model: bool = True,
+        return_best_model: bool = False,
     ):
         """
         Trains the node classification model and performs evaluation.
@@ -398,7 +416,7 @@ class NodeClassificationTrainer:
             if self.tqdm_flag
             else range(1, train_epoch + 1)
         )
-        for epoch in epoch_range:
+        for epoch in tqdm(epoch_range):
             # update the model parameters
             self.model_update(epoch)
 
@@ -416,9 +434,11 @@ class NodeClassificationTrainer:
                     self.best_epoch = epoch
                     self.best_valid_score = valid_score
                     # print (f"///// Best model parameters updated at epoch {epoch} /////")
-                    if os.path.exists(save_model_path):
-                        os.remove(save_model_path)
-                    torch.save(model.state_dict(), save_model_path)
+
+                    #! THIS CAUSE ERROR
+                    # if os.path.exists(save_model_path):
+                    #     os.remove(save_model_path)
+                    # torch.save(model.state_dict(), save_model_path)
                     
                 if early_stop_flag:
                     # stop training if the validation score does not improve for early_stop_rounds epochs

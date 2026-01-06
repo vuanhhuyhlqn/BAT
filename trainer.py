@@ -210,9 +210,9 @@ class NodeClassificationTrainer:
         augmented_data = Data(x=x, edge_index=edge_index, y=y)
         augmented_data.train_mask = train_mask
         
-        neighbor_loader = NeighborLoader(
+        train_neighbor_loader = NeighborLoader(
             data=augmented_data,
-            num_neighbors=[30, 10, 10],
+            num_neighbors=[15, 10, 5],
             batch_size=32,
             input_nodes=augmented_data.train_mask,
             shuffle=True
@@ -225,7 +225,7 @@ class NodeClassificationTrainer:
         model.train()
 
         # training with mini-batch through neighbor_loader
-        for batch in neighbor_loader:
+        for batch in train_neighbor_loader:
             batch = batch.to(device)
 
             optimizer.zero_grad()
@@ -234,7 +234,7 @@ class NodeClassificationTrainer:
             output = model(batch.x, batch.edge_index)
 
             # compute loss on training nodes
-            loss = criterion(output, batch.y)
+            loss = criterion(output[:batch.batch_size], batch.y[:batch.batch_size])
 
             # backpropagate the loss and update the model parameters
             loss.backward()
@@ -248,13 +248,38 @@ class NodeClassificationTrainer:
             self.runtime_info.append(update_runtime_info)
 
         # evaluate on validation set and adjust learning rate
+        # with torch.no_grad():
+        #     model.eval()
+        #     output = model(data.x, data.edge_index)
+        #     val_loss = criterion(output[data.val_mask], data.y[data.val_mask])
+        # scheduler.step(val_loss)
+
+        # evaluate on validation set with mini batch and adjust learning rate
         with torch.no_grad():
             model.eval()
-            output = model(data.x, data.edge_index)
-            val_loss = criterion(output[data.val_mask], data.y[data.val_mask])
-        scheduler.step(val_loss)
+            val_neighbor_loader = NeighborLoader(
+                data=data,
+                num_neighbors=[10, 10, 10],
+                batch_size=32,
+                input_nodes=data.val_mask,
+                shuffle=True
+            )
+
+            total_loss = 0
+            for batch in val_neighbor_loader:
+                # batch = batch.to(self.device)
+                output = model(batch.x, batch.edge_index)
+                loss = criterion(output[:batch.batch_size], batch.y[:batch.batch_size])
+
+                total_loss += loss.item() * batch.val_mask.sum().item()
+            avg_loss = total_loss / data.val_mask.sum().item()
+        scheduler.step(avg_loss)
+        # print(f"AVG loss: {avg_loss}")
+        # print(f"Learning rate: {scheduler.get_last_lr()}")
 
         return
+
+    
 
     #TODO: require sampling for big dataset
     def model_eval(self):
@@ -391,8 +416,10 @@ class NodeClassificationTrainer:
                     self.best_epoch = epoch
                     self.best_valid_score = valid_score
                     # print (f"///// Best model parameters updated at epoch {epoch} /////")
+                    if os.path.exists(save_model_path):
+                        os.remove(save_model_path)
                     torch.save(model.state_dict(), save_model_path)
-
+                    
                 if early_stop_flag:
                     # stop training if the validation score does not improve for early_stop_rounds epochs
                     if epoch - self.best_epoch >= early_stop_patience:

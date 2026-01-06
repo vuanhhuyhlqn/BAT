@@ -4,6 +4,8 @@ import time
 import torch
 import torch.nn.functional as F
 import torch_geometric as pyg
+from torch_geometric.data import Data
+from torch_geometric.loader import NeighborLoader
 from torch_geometric.utils import to_undirected
 from utils import seed_everything
 
@@ -275,6 +277,7 @@ class BatAugmenter(BaseGraphAugmenter):
             data.y[data.train_mask],
             data.x.device,
         )
+
         classes, train_class_counts = y_train.unique(return_counts=True)
         self.classes = classes
         self.train_class_counts = train_class_counts
@@ -464,15 +467,35 @@ class BatAugmenter(BaseGraphAugmenter):
         - pred_proba: torch.Tensor or numpy.ndarray
             Predicted class probabilities.
         """
+
+
+        assert(x.device == torch.device('cpu'))
+        assert(edge_index.device == torch.device('cpu'))
+
         model.eval()
         with torch.no_grad():
-            device = next(model.parameters()).device # get the model device
 
-            x = x.to(device)
-            edge_index = edge_index.to(device)
+            neighbor_loader = NeighborLoader(
+                data=Data(x, edge_index),
+                num_neighbors=[30, 20, 10],
+                batch_size=1024,
+                shuffle=False
+            )
+            
+            logits = []
 
-            logits = model.forward(x, edge_index)
+            for batch in neighbor_loader:
+                device = next(model.parameters()).device # get the model device
+                batch = batch.to(device)
 
+                x = x.to(device)
+                edge_index = edge_index.to(device)
+
+                batch_logits = model.forward(batch.x, batch.edge_index)
+                batch_logits = batch_logits[:batch.batch_size] 
+                logits.append(batch_logits.cpu())
+
+        logits = torch.cat(logits, dim=0)
         pred_proba = torch.softmax(logits, dim=1).detach().cpu() # move pred_proba to cpu after caluclation
         if return_numpy:
             pred_proba = pred_proba.numpy()

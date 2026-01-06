@@ -214,9 +214,10 @@ class NodeClassificationTrainer:
         
         train_neighbor_loader = NeighborLoader(
             data=augmented_data,
-            num_neighbors=[30, 20, 10],
-            batch_size=1024,
+            num_neighbors=[10, 10, 10],
+            batch_size=32,
             input_nodes=augmented_data.train_mask,
+            num_workers=2,
             shuffle=True
         )
 
@@ -227,7 +228,7 @@ class NodeClassificationTrainer:
         model.train()
 
         # training with mini-batch through neighbor_loader
-        for batch in train_neighbor_loader:
+        for batch in tqdm(train_neighbor_loader):
             batch = batch.to(device)
 
             optimizer.zero_grad()

@@ -1,5 +1,6 @@
 from abc import ABC
 from abc import abstractmethod
+from tqdm import tqdm
 import time
 import torch
 import torch.nn.functional as F
@@ -7,6 +8,7 @@ import torch_geometric as pyg
 from torch_geometric.data import Data
 from torch_geometric.loader import NeighborLoader
 from torch_geometric.utils import to_undirected
+from torch_scatter import scatter_add
 from utils import seed_everything
 
 
@@ -358,7 +360,9 @@ class BatAugmenter(BaseGraphAugmenter):
         node_posterior = self.estimate_node_posterior_likelihood(
             y_pred_proba, y_neighbor_distr
         )
+
         virtual_link_proba = self.get_virtual_link_proba(node_posterior, y_pred)
+
         time_cost_sim = time.time() - start_time_sim
 
         start_time_gen = time.time()
@@ -376,11 +380,12 @@ class BatAugmenter(BaseGraphAugmenter):
         virtual_edge_index = self.edge_sampling(
             edge_index_candidates, edge_sampling_proba, self.random_state
         )
+        # print("OK6")
         virtual_edge_index[
             0
         ] += self.n_node  # adjust index to match original node index
         virtual_edge_index = to_undirected(virtual_edge_index)
-
+        
         # compute virtual node features
         x_virtual = self.get_virtual_node_features(x, y_pred, self.classes)
         time_cost_gen = time.time() - start_time_gen
@@ -441,8 +446,7 @@ class BatAugmenter(BaseGraphAugmenter):
             f"    device={self.device},\n"
             f")"
         )
-
-    #TODO: require sampling for big dataset
+        
     @staticmethod
     def predict_proba(
         model: torch.nn.Module,
@@ -477,8 +481,9 @@ class BatAugmenter(BaseGraphAugmenter):
 
             neighbor_loader = NeighborLoader(
                 data=Data(x, edge_index),
-                num_neighbors=[30, 20, 10],
+                num_neighbors=[32, 16, 8],
                 batch_size=1024,
+                num_workers=4,
                 shuffle=False
             )
             
@@ -497,6 +502,7 @@ class BatAugmenter(BaseGraphAugmenter):
 
         logits = torch.cat(logits, dim=0)
         pred_proba = torch.softmax(logits, dim=1).detach().cpu() # move pred_proba to cpu after caluclation
+
         if return_numpy:
             pred_proba = pred_proba.numpy()
         return pred_proba
@@ -606,21 +612,27 @@ class BatAugmenter(BaseGraphAugmenter):
         ).scatter_(
             1, y_pred[edge_index[1]].unsqueeze(1), 1
         )  # [n_edges, n_class]
-        
-        neighbor_y_distr = (
-            torch.zeros((n_node, n_class), dtype=torch.int, device=device)
-            .scatter_add_(
-                dim=0,
-                index=edge_index[0].repeat(n_class, 1).T,
-                src=edge_dest_class,
-            )
-            .float()
-        )  # [n_nodes, n_class]
+
+        # neighbor_y_distr = (
+        #     torch.zeros((n_node, n_class), dtype=torch.int, device=device)
+        #     .scatter_add_(
+        #         dim=0,
+        #         index=edge_index[0].repeat(n_class, 1).T,
+        #         src=edge_dest_class,
+        #     )
+        #     .float()
+        # )  # [n_nodes, n_class]
+        neighbor_y_distr = scatter_add(
+            src=edge_dest_class,       # [n_edges, n_class]
+            index=edge_index[0],       # [n_edges]
+            dim=0, 
+            dim_size=n_node
+        ).float()
 
         # row-wise normalization
         neighbor_y_distr /= neighbor_y_distr.sum(axis=1).reshape(-1, 1)
         neighbor_y_distr = neighbor_y_distr.nan_to_num(0)
-
+        # print("t3")
         self.time_neighbor_distr = time.time() - start_time
         return neighbor_y_distr
 

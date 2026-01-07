@@ -72,10 +72,10 @@ def load_data(
         dataset = Coauthor(path + "/Coauthor", name, transform=T.NormalizeFeatures())
     elif name in ["reddit"]:
         from torch_geometric.datasets import Reddit
-        
         dataset = Reddit(path + '/Reddit', transform=T.NormalizeFeatures())
     else:
         raise NotImplementedError("Not Implemented Dataset!")
+        
     if reorder_label:
         dataset.data.y, _ = reorder_label_by_count(dataset.data.y)
     # Load data to device

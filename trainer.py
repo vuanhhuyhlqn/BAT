@@ -97,7 +97,7 @@ class NodeClassificationTrainer:
         verbose_config: dict = default_verbose_config,
         save_model_dir: str = "saved_ckpt",
         save_model_name: str = None,
-        enable_tqdm: bool = False,
+        enable_tqdm: bool = True,
         random_state: int = None,
     ):
         # parameter checks
@@ -211,13 +211,13 @@ class NodeClassificationTrainer:
 
         augmented_data = Data(x=x, edge_index=edge_index, y=y)
         augmented_data.train_mask = train_mask
-        
+
         train_neighbor_loader = NeighborLoader(
             data=augmented_data,
-            num_neighbors=[10, 10, 10],
-            batch_size=32,
+            num_neighbors=[32, 16, 8],
+            batch_size=1024,
             input_nodes=augmented_data.train_mask,
-            num_workers=2,
+            num_workers=4,
             shuffle=True
         )
 
@@ -228,7 +228,7 @@ class NodeClassificationTrainer:
         model.train()
 
         # training with mini-batch through neighbor_loader
-        for batch in tqdm(train_neighbor_loader):
+        for batch in train_neighbor_loader:
             batch = batch.to(device)
 
             optimizer.zero_grad()
@@ -262,9 +262,10 @@ class NodeClassificationTrainer:
             model.eval()
             val_neighbor_loader = NeighborLoader(
                 data=data,
-                num_neighbors=[30, 20, 10],
+                num_neighbors=[32, 16, 8],
                 batch_size=1024,
                 input_nodes=data.val_mask,
+                num_workers=4,
                 shuffle=False
             )
 
@@ -305,7 +306,7 @@ class NodeClassificationTrainer:
         with torch.no_grad():
             val_neighbor_loader = NeighborLoader(
                 data=data,
-                num_neighbors=[30, 20, 10],
+                num_neighbors=[32, 16, 8],
                 batch_size=1024,
                 shuffle=False
             )
@@ -417,7 +418,7 @@ class NodeClassificationTrainer:
             if self.tqdm_flag
             else range(1, train_epoch + 1)
         )
-        for epoch in tqdm(epoch_range):
+        for epoch in epoch_range:
             # update the model parameters
             self.model_update(epoch)
 

@@ -481,8 +481,8 @@ class BatAugmenter(BaseGraphAugmenter):
 
             neighbor_loader = NeighborLoader(
                 data=Data(x, edge_index),
-                num_neighbors=[32, 16, 8],
-                batch_size=32,
+                num_neighbors=[10, 10, 10],
+                batch_size=1024,
                 num_workers=4,
                 shuffle=False
             )

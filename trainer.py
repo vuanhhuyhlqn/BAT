@@ -212,17 +212,14 @@ class NodeClassificationTrainer:
         augmented_data = Data(x=x, edge_index=edge_index, y=y)
         augmented_data.train_mask = train_mask
         
-        start = time.time() 
         train_neighbor_loader = NeighborLoader(
             data=augmented_data,
             num_neighbors=[10, 10, 10],
-            batch_size=32,
+            batch_size=1024,
             input_nodes=augmented_data.train_mask,
-            num_workers=2,
+
             shuffle=True
         )
-        end = time.time()
-        print(f"Neighbor loader time: {(end - start):.4f}")
 
         # record runtime
         start_time = time.time()
@@ -233,7 +230,6 @@ class NodeClassificationTrainer:
         # training with mini-batch through neighbor_loader
 
         for batch in train_neighbor_loader:
-            start = time.time()
             batch = batch.to(device)
 
             optimizer.zero_grad()
@@ -247,8 +243,6 @@ class NodeClassificationTrainer:
             # backpropagate the loss and update the model parameters
             loss.backward()
             optimizer.step()
-            end = time.time()
-            print(f"Batch time: {(end -start):.4f}")
 
         # record runtime
         used_time = time.time() - start_time
@@ -257,23 +251,13 @@ class NodeClassificationTrainer:
             update_runtime_info.update(aug_runtime_info)
             self.runtime_info.append(update_runtime_info)
 
-        # evaluate on validation set and adjust learning rate
-        # with torch.no_grad():
-        #     model.eval()
-        #     output = model(data.x, data.edge_index)
-        #     val_loss = criterion(output[data.val_mask], data.y[data.val_mask])
-        # scheduler.step(val_loss)
-
-        # evaluate on validation set with mini batch and adjust learning rate
         with torch.no_grad():
-            start = time.time()
             model.eval()
             val_neighbor_loader = NeighborLoader(
                 data=data,
                 num_neighbors=[10, 10, 10],
-                batch_size=32,
+                batch_size=1024,
                 input_nodes=data.val_mask,
-                num_workers=4,
                 shuffle=False
             )
 
@@ -285,8 +269,6 @@ class NodeClassificationTrainer:
 
                 total_loss += loss.item() * batch.val_mask.sum().item()
             avg_loss = total_loss / data.val_mask.sum().item()
-            end = time.time()
-            print(f"Eval time: {(end - start):.4f}")
         scheduler.step(avg_loss)
         # print(f"AVG loss: {avg_loss}")
         # print(f"Learning rate: {scheduler.get_last_lr()}")
@@ -314,7 +296,7 @@ class NodeClassificationTrainer:
             val_neighbor_loader = NeighborLoader(
                 data=data,
                 num_neighbors=[10, 10, 10],
-                batch_size=32,
+                batch_size=1024,
                 shuffle=False
             )
             

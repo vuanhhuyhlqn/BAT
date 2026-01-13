@@ -354,6 +354,10 @@ We now test **BAT**'s robustness to varying types of extreme class-imbalance. In
 
 Please refer to our paper: https://arxiv.org/abs/2308.14181 for more details.
 
+## My Contributions
+
+I enhanced BAT with a sampling mechanism in training, validating and data augmentation so BAT could run on large dataset like Reddit without causing OOM (Out Of Memory) on GPU.
+
 ## References
 
 | #    | Reference                                                                                                                                                                                                                                  |

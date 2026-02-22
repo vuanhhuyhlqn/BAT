@@ -357,6 +357,7 @@ Please refer to our paper: https://arxiv.org/abs/2308.14181 for more details.
 ## My Contributions
 
 I enhanced BAT with a sampling mechanism in training, validating and data augmentation so BAT could run on large dataset like Reddit without causing OOM (Out Of Memory) on GPU.
+Link: [<a href="https://drive.google.com/file/d/1xecGAIeZrtyfFTgM5gG2Wwr8SxLpPa2k/view?usp=drive_link">PDF</a>] 
 
 ## References
 
@@ -373,3 +374,4 @@ I enhanced BAT with a sampling mechanism in training, validating and data augmen
 | [9]  | Will Hamilton, Zhitao Ying, and Jure Leskovec. Inductive representation learning on large graphs. Advances in neural information processing systems, 30, 2017.                                                                             |
 | [10] | Johannes Gasteiger, Aleksandar Bojchevski, and Stephan Günnemann. Predict then propagate: Graph neural networks meet personalized pagerank. arXiv preprint arXiv:1810.05997, 2018.                                                         |
 | [11] | Eli Chien, Jianhao Peng, Pan Li, and Olgica Milenkovic. Adaptive universal generalized pagerank graph neural network. arXiv preprint arXiv:2006.07988, 2020.                                                                               |
+
